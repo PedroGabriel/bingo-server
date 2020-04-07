@@ -1,8 +1,8 @@
 module.exports = {
-  name: "logout",
-  path: "/logout",
+  name: "home",
+  path: "/",
   type: "get",
   page: (res, req) => {
-    res.end("rest logout");
+    res.end("home");
   },
 };

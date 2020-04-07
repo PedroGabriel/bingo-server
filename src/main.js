@@ -1,9 +1,8 @@
-const uWS = require("uWebSockets.js");
-
-const { mem, encoder, uuid } = require("./utils");
+const { db, encoder, uuid, cookie } = require("./utils");
 const rooms = require("./rooms");
 const routes = require("./routes");
 
+const uWS = require("uWebSockets.js");
 const app = uWS
   .App({
     // key_file_name: 'misc/key.pem',
@@ -16,29 +15,26 @@ const app = uWS
     idleTimeout: 60 * 5,
     open: (ws, req) => {
       ws.id = uuid();
-      mem.hmset(`users:${ws.id}`, { name: "test" });
-      mem.set(`connected:${ws.id}`, 1);
-
+      // db.hmset(`users:${ws.id}`, { name: "test" });
+      // db.set(`connected:${ws.id}`, 1);
       ws.subscribe("main");
-      ws.send(encoder.encode([1, 3, 2]));
+      ws.subscribe(ws.id);
     },
     message: (ws, msg, isBinary) => {
-      // console.log(ws.id + ": " + new TextDecoder("UTF-8").decode(msg));
-      // console.log(ws.id + ": " + encoder.decode(msg));
-      // testar pubsub para separar a mensagel por room
+      console.log("fora", ws.id + ": " + encoder.decode(msg));
     },
-    drain: ws => {
+    drain: (ws) => {
       console.log("WebSocket backpressure: " + ws.getBufferedAmount());
     },
     close: (ws, code, message) => {
-      mem.del(`users:${ws.id}`);
-      mem.del(`connected:${ws.id}`);
-    }
+      // db.del(`users:${ws.id}`);
+      // db.del(`connected:${ws.id}`);
+    },
   });
 
-Object.keys(routes).forEach(k => {
+Object.keys(routes).forEach((k) => {
   let r = routes[k];
-  app.any(r.path, r.page);
+  app[r.type || "any"](r.path, r.page);
 });
 
 app.listen(parseInt(process.env.PORT || 5000), () => {});

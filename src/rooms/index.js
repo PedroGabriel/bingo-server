@@ -9,4 +9,4 @@ require("fs")
     rooms[room.name] = { ...room };
   });
 
-module.exports.rooms = rooms;
+module.exports = rooms;
