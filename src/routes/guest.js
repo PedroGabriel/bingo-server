@@ -2,14 +2,14 @@ const { readJson } = require("../utils");
 const auth = require("../auth.js");
 
 module.exports = {
-  name: "login",
-  path: "/login",
+  name: "guest",
+  path: "/guest",
   type: "post",
   page: (res, req) => {
     res.writeHeader("Content-Type", "application/json");
     readJson(res, (obj) => {
       auth
-        .login(res, obj.email, obj.password)
+        .guest(res)
         .then((user) => {
           res.end(JSON.stringify(user));
         })

@@ -1,6 +1,11 @@
-const { db, encoder, uuid, cookie } = require("./utils");
+const { db, encoder, cookie } = require("./utils");
 const rooms = require("./rooms");
 const routes = require("./routes");
+
+const clients = {};
+setInterval(() => {
+  console.log("\nclients:", clients, "\n");
+}, 10000);
 
 const uWS = require("uWebSockets.js");
 const app = uWS
@@ -14,21 +19,54 @@ const app = uWS
     maxPayloadLength: 16 * 1024 * 1024,
     idleTimeout: 60 * 5,
     open: (ws, req) => {
-      ws.id = uuid();
-      // db.hmset(`users:${ws.id}`, { name: "test" });
-      // db.set(`connected:${ws.id}`, 1);
-      ws.subscribe("main");
-      ws.subscribe(ws.id);
+      let sid = cookie.get(req, "SID");
+      if (!sid) ws.close();
+
+      db.hgetall(`session:${sid}`, (err, res) => {
+        if (err) {
+          ws.close();
+          return false;
+        }
+
+        if (res && res.id) {
+          let id = res.id;
+
+          if (clients[id]) clients[id].close();
+
+          ws.id = id;
+          ws.sid = sid;
+          clients[id] = ws;
+
+          ws.room = "main";
+          ws.subscribe(`user:${id}`);
+
+          if (ws.room && rooms[ws.room] && rooms[ws.room].open) {
+            rooms[ws.room].open(app, ws, req);
+          }
+        }
+      });
     },
-    message: (ws, msg, isBinary) => {
-      console.log("fora", ws.id + ": " + encoder.decode(msg));
+    message: (ws, msg) => {
+      if (msg) msg = encoder.decode(msg);
+
+      if (ws.room && rooms[ws.room] && rooms[ws.room].message) {
+        rooms[ws.room].message(app, ws, msg);
+      }
     },
     drain: (ws) => {
       console.log("WebSocket backpressure: " + ws.getBufferedAmount());
     },
-    close: (ws, code, message) => {
-      // db.del(`users:${ws.id}`);
-      // db.del(`connected:${ws.id}`);
+    close: (ws, code, msg) => {
+      const id = ws.id;
+      if (clients[id]) {
+        if (msg) msg = encoder.decode(msg);
+        if (ws.room && rooms[ws.room] && rooms[ws.room].close) {
+          rooms[ws.room].close(app, ws, code, msg);
+        }
+
+        db.del(`session:${clients[id].sid}`);
+        delete clients[id];
+      }
     },
   });
 

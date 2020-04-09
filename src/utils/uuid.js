@@ -1,1 +1,2 @@
-module.exports = require("uuid-random");
+const { v4 } = require("uuid");
+module.exports = v4;
