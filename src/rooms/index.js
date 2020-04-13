@@ -3,10 +3,9 @@ const normalizedPath = require("path").join(__dirname, "./");
 
 require("fs")
   .readdirSync(normalizedPath)
-  .forEach(function(file) {
+  .forEach(function (file) {
     if (file == "index.js") return;
-    let room = require("./" + file);
-    rooms[room.name] = { ...room };
+    rooms[file.replace(".js", "")] = require("./" + file);
   });
 
 module.exports = rooms;
