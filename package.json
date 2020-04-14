@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "nodemon --inspect index.js",
-    "build": "webpack"
+    "loadtest": "node loadtest.js"
   },
   "author": "",
   "license": "ISC",
@@ -21,6 +21,7 @@
     "uuid": "^7.0.3"
   },
   "devDependencies": {
+    "artillery": "^1.6.0",
     "nodemon": "^2.0.2"
   }
 }

@@ -1,7 +1,14 @@
-const { db, encoder, cookie } = require("./utils");
+const { db, encoder, cookie, log } = require("./utils");
 const room = require("./room.js");
 const routes = require("./routes");
 
+let loadtest, loadtest_hit;
+if (process.env.LOGLEVEL == "test") {
+  loadtest = require("../tests/loadtest/session_ids");
+  loadtest_hit = 0;
+}
+
+/*
 room.join({}, "main");
 
 const rows = [
@@ -56,21 +63,21 @@ for (test = 1; test <= 1; test++) {
       num = rows[i] * gap_per_col + Math.floor(Math.random() * gap_per_col) + 1;
     } while (used[num]);
     used[num] = 1;
-    // console.log(num, rule_text[rows[i]]);
+    // log.dev(num, rule_text[rows[i]]);
     if (num < rule[rows[i]].min || num > rule[rows[i]].max) test_passed = false;
   }
-  // console.log(test_passed ? "OK" : "FAILED");
-  // console.log("\n");
+  // log.dev(test_passed ? "OK" : "FAILED");
+  // log.dev("\n");
   if (!test_passed) all_test = false;
 }
-// console.log(all_test ? "ALL OK" : "SOME FAILED");
+// log.dev(all_test ? "ALL OK" : "SOME FAILED");
 
 return;
-
+*/
 const clients = {};
-setInterval(() => {
-  console.log("\nclients:", clients, "\n");
-}, 10000);
+// setInterval(() => {
+//   log.dev("\nclients:", clients, "\n");
+// }, 10000);
 
 const uWS = require("uWebSockets.js");
 const app = uWS
@@ -85,56 +92,62 @@ const app = uWS
     idleTimeout: 60 * 5,
     open: (ws, req) => {
       let sid = cookie.get(req, "SID");
-      if (!sid) ws.close();
 
-      db.hgetall(`session:${sid}`, (err, res) => {
-        if (err) {
-          ws.close();
-          return false;
-        }
+      if (loadtest) {
+        loadtest_hit++;
+        sid = loadtest(loadtest_hit);
+      }
 
-        if (res && res.id) {
-          let id = res.id;
+      if (sid) {
+        db.hgetallp(`session:${sid}`)
+          .then((result) => {
+            if (result && result.id) {
+              let id = result.id;
 
-          if (clients[id]) clients[id].close();
+              if (clients[id]) clients[id].close();
 
-          ws.id = id;
-          ws.sid = sid;
+              ws.id = id;
+              ws.sid = sid;
 
-          ws.do = (message) => ws.send(encoder.encode(message));
-          ws.say = (slug, message) => ws.publish(slug, encoder.encode(message));
-          ws.sub = (slug) => ws.subscribe(slug);
-          ws.unsub = (slug) => ws.unsubscribe(slug);
-          ws.unsubAll = () => ws.unsubscribeAll(slug);
+              ws.do = (message) => ws.send(encoder.encode(message));
+              ws.say = (slug, message) =>
+                ws.publish(slug, encoder.encode(message));
+              ws.sub = (slug) => ws.subscribe(slug);
+              ws.unsub = (slug) => ws.unsubscribe(slug);
+              ws.unsubAll = () => ws.unsubscribeAll(slug);
 
-          ws.sub(`user:${id}`);
-          // if (ws.room && rooms[ws.room] && rooms[ws.room].open) {
-          //   rooms[ws.room].open(app, ws, req);
-          // }
+              ws.sub(`user:${id}`);
 
-          clients[id] = ws;
-        }
-      });
+              log.test(id, "connected", loadtest_hit);
+
+              clients[id] = ws;
+            } else {
+              log.test(sid, "not in db");
+              ws.close();
+            }
+          })
+          .catch((err) => {
+            log.test(sid, "not in db");
+            ws.close();
+          });
+      } else {
+        log.test("closed, no sid");
+        ws.close();
+      }
     },
     message: (ws, msg) => {
-      if (msg) msg = encoder.decode(msg);
-
-      // if (ws.room && rooms[ws.room] && rooms[ws.room].message) {
-      //   rooms[ws.room].message(app, ws, msg);
-      // }
+      // if (msg) msg = encoder.decode(msg);
     },
     drain: (ws) => {
-      console.log("WebSocket backpressure: " + ws.getBufferedAmount());
+      log.log("WebSocket backpressure: " + ws.getBufferedAmount());
     },
     close: (ws, code, msg) => {
       const id = ws.id;
+      log.log("closed", id);
       if (clients[id]) {
-        if (msg) msg = encoder.decode(msg);
-        // if (ws.room && rooms[ws.room] && rooms[ws.room].close) {
-        //   rooms[ws.room].close(app, ws, code, msg);
-        // }
+        // if (msg) msg = encoder.decode(msg);
 
-        db.del(`session:${clients[id].sid}`);
+        if (!loadtest) db.del(`session:${clients[id].sid}`);
         delete clients[id];
       }
     },

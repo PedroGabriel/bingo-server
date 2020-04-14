@@ -1,4 +1,5 @@
 const redis = require("redis");
+const { promisify } = require("util");
 const redisScan = require("node-redis-scan");
 
 const client = redis.createClient();
@@ -62,6 +63,8 @@ client.all = (match, key, cb = null, count = 100) => {
 client.one = (match, cb = null) => {
   return client.all(match, cb, cb, 1);
 };
+
+client.hgetallp = promisify(client.hgetall).bind(client);
 
 client.on("connect", () => {});
 client.on("error", (err) => console.log("REDIS ERROR", err));
