@@ -1,9 +1,6 @@
 const { uuid, md5, mysql, cookie, db } = require("./utils");
 const room_list = require("./rooms");
 const rooms = {};
-const single_rooms_dict = {};
-
-const list = {};
 
 module.exports = {
   join: (user, name) => {

@@ -4,12 +4,14 @@ const redisScan = require("node-redis-scan");
 
 const client = redis.createClient();
 const scanner = new redisScan(client);
+client.scanner = scanner;
 
-client.run = scanner;
+client.hgetallp = promisify(client.hgetall).bind(client);
+client.scanp = promisify(client.scan).bind(client);
 
 client.each = (match, key = null, cb = null) => {
   cb = cb === null ? key : cb;
-  client.run.eachScan(
+  client.scanner.eachScan(
     match,
     (scan_res) => {
       if (scan_res.length) {
@@ -35,7 +37,7 @@ client.each = (match, key = null, cb = null) => {
 client.all = (match, key, cb = null, count = 100) => {
   if (typeof key === "function") count = cb;
 
-  client.run.scan(match, (err, scan_res) => {
+  client.scanner.scan(match, (err, scan_res) => {
     if (err) console.log("REDIS SCAN ERROR", err);
     if (count) scan_res = scan_res.slice(0, count);
 
@@ -63,8 +65,6 @@ client.all = (match, key, cb = null, count = 100) => {
 client.one = (match, cb = null) => {
   return client.all(match, cb, cb, 1);
 };
-
-client.hgetallp = promisify(client.hgetall).bind(client);
 
 client.on("connect", () => {});
 client.on("error", (err) => console.log("REDIS ERROR", err));
