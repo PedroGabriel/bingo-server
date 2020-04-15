@@ -1,9 +1,10 @@
 config:
   target: "ws://127.0.0.1:5000?loadtest"
   phases:
-    - duration: 30 # Test for sec
-      arrivalRate: 10000 # Every second, add 10 users
-      #rampTo: 100 # Ramp it up to 100 users over the duration
+    - duration: 1 # Test for sec
+      arrivalCount: 1
+      #arrivalRate: 1 # Every second, add 10 users
+      #rampTo: 1 # Ramp it up to 100 users over the duration
 scenarios:
   - engine: "ws"
     flow:

@@ -1,7 +1,7 @@
 require("dotenv").config();
 
-const db = require("./src/utils/db");
-const mysql = require("./src/utils/mysql");
+const db = require("./src/Utils/db");
+const mysql = require("./src/Utils/mysql");
 let keys = 0;
 
 mysql.query(

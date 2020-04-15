@@ -1,10 +1,9 @@
-const { db, uuid, unix } = require("../utils");
-const room_name = "main";
+const { uuid, db } = require("../Utils");
 
 class Room {
   #id = ""; // The unique id
   #key = ""; // The current db key name
-  #name = room_name; // The unique room name
+  #name = ""; // The unique room name
   #app = null; // ws server
 
   #state = ""; // Current room state
@@ -15,26 +14,23 @@ class Room {
 
   #party = null; // If this is a party room, party object
 
-  static options = {
-    single_room: true,
-    announce: true, // Announce when new player join
-    max_users: 0, // Max users in this room
-    min_users: 1, // Min players to start the room
-  };
-
   #states = {
     open: "open",
     closed: "closed",
     full: "full",
   };
 
-  constructor(app, party = {}) {
+  #options = {};
+
+  constructor(app, name, party = null, options = {}) {
     this.#id = uuid();
     this.#app = app;
+    this.#name = name;
+    this.#options = options;
     this.#setParty(party);
     this.#setKey(this.#party);
 
-    this.#init(this.#key, this.#party, this.options);
+    this.#init(this.#key, this.#party, this.#options);
   }
 
   say = (message) => this.#app.publish(this.#key, message);
@@ -42,20 +38,20 @@ class Room {
   join = (user) => {
     if (this.#state != this.#states.open) return false;
 
-    if (this.#addUser(user) && this.options.announce)
+    if (this.#addUser(user) && this.#options.announce)
       user.say(this.#key, { j: user.name, t: this.#users_count });
 
     return true;
   };
 
   leave = (user) => {
-    if (this.#removeUser(user) && this.options.announce)
+    if (this.#removeUser(user) && this.#options.announce)
       this.say({ l: user.name, t: this.#users_count });
   };
 
   remove = () => db.del(this.#key);
   open = () => {
-    if (this.options.max_users && this.#users_count >= this.options.max_users)
+    if (this.#options.max_users && this.#users_count >= this.#options.max_users)
       this.#setState(this.#states.full);
     else this.#setState(this.#states.open);
   };
@@ -69,7 +65,7 @@ class Room {
       id: this.#id,
       name: this.#name,
       party: this.#party ? this.#party.id : null,
-      options: this.options,
+      options: this.#options,
       created_at: unix.now(),
       state: this.#state,
     });
@@ -78,7 +74,7 @@ class Room {
   #setKey = (party = null) => {
     let key = `room:${this.#name}`;
 
-    if (!this.options.single_room) key += `:${this.#id}`;
+    if (!this.#options.single) key += `:${this.#id}`;
 
     if (party) key += `:party:${party.id}`;
     else key += `:online`;
@@ -106,7 +102,10 @@ class Room {
     delete this.#users[user.id];
     this.#users_count--;
     if (this.#state == this.#states.full) {
-      if (this.options.max_users && this.#users_count < this.options.max_users)
+      if (
+        this.#options.max_users &&
+        this.#users_count < this.#options.max_users
+      )
         this.#setState(this.#states.open);
     }
     return true;
@@ -118,7 +117,10 @@ class Room {
     this.#users[user.id] = user;
     this.#users_count++;
     if (this.#state == this.#states.open) {
-      if (this.options.max_users && this.#users_count >= this.options.max_users)
+      if (
+        this.#options.max_users &&
+        this.#users_count >= this.#options.max_users
+      )
         this.#setState(this.#states.full);
     }
     return true;

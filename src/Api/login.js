@@ -1,5 +1,5 @@
-const { readJson } = require("../utils");
-const auth = require("../auth.js");
+const { readJson } = require("../Utils");
+const Auth = require("../Auth.js");
 
 module.exports = {
   name: "login",
@@ -8,8 +8,7 @@ module.exports = {
   page: (res, req) => {
     res.writeHeader("Content-Type", "application/json");
     readJson(res, (obj) => {
-      auth
-        .login(res, obj.email, obj.password)
+      Auth.login(res, obj.email, obj.password)
         .then((user) => {
           res.end(JSON.stringify(user));
         })
