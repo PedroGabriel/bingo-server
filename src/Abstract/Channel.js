@@ -1,18 +1,18 @@
-const { uuid, db } = require("../Utils");
+const { uuid, db } = require("../Libs");
 
-class Room {
+class Channel {
   #id = ""; // The unique id
   #key = ""; // The current db key name
-  #name = ""; // The unique room name
+  #name = ""; // The unique channel name
   #app = null; // ws server
 
-  #state = ""; // Current room state
-  #stateless = ""; // Current room key without state
+  #state = ""; // Current channel state
+  #stateless = ""; // Current channel key without state
 
-  #users = {}; // All users inside this room
-  #users_count = 0; // Total users inside this room
+  #users = {}; // All users inside this channel
+  #users_count = 0; // Total users inside this channel
 
-  #party = null; // If this is a party room, party object
+  #party = null; // If this is a party channel, party object
 
   #states = {
     open: "open",
@@ -72,7 +72,7 @@ class Room {
   };
 
   #setKey = (party = null) => {
-    let key = `room:${this.#name}`;
+    let key = `channel:${this.#name}`;
 
     if (!this.#options.single) key += `:${this.#id}`;
 
@@ -127,4 +127,4 @@ class Room {
   };
 }
 
-module.exports = Room;
+module.exports = Channel;

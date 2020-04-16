@@ -1,8 +1,8 @@
-const { uuid, md5, mysql, cookie, db } = require("./Utils");
+const { uuid, md5, mysql, cookie, db } = require("./Libs");
 const Ws = require("./Ws");
-// const Room = require("./Room");
-// const User = require("./User");
-// const Party = require("./Party");
+const Room = require("./Room");
+const User = require("./User");
+const Party = require("./Party");
 
 class App extends Ws {
   ws = null;
@@ -13,7 +13,7 @@ class App extends Ws {
   party = {};
 
   rooms = {
-    list: require("./Rooms"),
+    list: require("./Channels"),
     instance: {},
   };
 
@@ -24,7 +24,5 @@ class App extends Ws {
     this.init(port, ssl);
   }
 }
-
-// console.log(room.list["main"].options.single);
 
 module.exports = App;

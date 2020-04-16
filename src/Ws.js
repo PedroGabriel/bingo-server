@@ -1,4 +1,4 @@
-const { db, encoder, cookie, log } = require("./Utils");
+const { db, encoder, cookie, log } = require("./Libs");
 const uWS = require("uWebSockets.js");
 
 class Ws {

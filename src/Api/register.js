@@ -1,4 +1,4 @@
-const { readJson } = require("../Utils");
+const { readJson } = require("../Libs");
 const Auth = require("../Auth.js");
 
 module.exports = {

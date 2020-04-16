@@ -1,4 +1,4 @@
-const { uuid, md5, mysql, cookie, db } = require("./Utils");
+const { uuid, md5, mysql, cookie, db } = require("./Libs");
 
 module.exports = {
   register: (res, name, email, password) => {
