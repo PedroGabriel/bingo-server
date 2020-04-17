@@ -3,17 +3,19 @@ const uWS = require("uWebSockets.js");
 
 class Ws {
   socket = null;
-  routes = require("./Api");
+  Apis = require("./Api");
   clients = {};
 
   #loadtest = null;
   #loadtest_hit = null;
 
-  init = (port, ssl = {}) => {
+  init = (port, ssl = {}, listener = {}) => {
     if (process.env.LOGLEVEL == "test") {
       this.#loadtest = require("../tests/loadtest/session_ids");
       this.#loadtest_hit = 0;
     }
+
+    listener.open;
 
     this.socket = uWS.App(ssl).ws("/*", {
       compression: 0,
@@ -31,58 +33,46 @@ class Ws {
           db.hgetallp(`session:${sid}`)
             .then((result) => {
               if (result && result.id) {
-                let id = result.id;
-
-                if (this.clients[id]) this.clients[id].close();
-
-                ws.id = id;
+                ws.id = result.id;
                 ws.sid = sid;
 
-                ws.do = (message) => ws.send(encoder.encode(message));
-                ws.say = (slug, message) =>
-                  ws.publish(slug, encoder.encode(message));
-                ws.sub = (slug) => ws.subscribe(slug);
-                ws.unsub = (slug) => ws.unsubscribe(slug);
-                ws.unsubAll = () => ws.unsubscribeAll(slug);
+                if (this.clients[ws.id]) this.clients[ws.id].close();
 
-                ws.sub(`user:${id}`);
-
-                log.test(id, "connected", this.#loadtest_hit);
-
-                this.clients[id] = ws;
-              } else {
-                log.test(sid, "not in db");
-                ws.close();
-              }
+                this.clients[ws.id] = ws;
+                if (listener.open) listener.open(ws, req);
+                log.log("connected", ws.id);
+              } else ws.close();
             })
-            .catch((err) => {
-              log.test(sid, "not in db");
-              ws.close();
-            });
-        } else {
-          log.test("closed, no sid");
-          ws.close();
-        }
+            .catch((err) => ws.close());
+        } else ws.close();
       },
       message: (ws, msg) => {
-        // if (msg) msg = encoder.decode(msg);
+        if (listener.message)
+          listener.message(
+            ws,
+            msg.msg.byteLength ? encoder.decode(msg) : undefined
+          );
       },
       drain: (ws) => {
         log.log("WebSocket backpressure: " + ws.getBufferedAmount());
+        if (listener.drain) listener.drain(ws);
       },
       close: (ws, code, msg) => {
-        const id = ws.id;
-        log.log("closed", id);
-        if (this.clients[id]) {
-          // if (msg) msg = encoder.decode(msg);
-
-          if (!this.#loadtest) db.del(`session:${this.clients[id].sid}`);
-          delete this.clients[id];
+        if (this.clients[ws.id]) {
+          if (!this.#loadtest) db.del(`session:${this.clients[ws.id].sid}`);
+          delete this.clients[ws.id];
         }
+        log.log("closed", ws.id ? ws.id : "not logged user");
+        if (listener.close)
+          listener.close(
+            ws,
+            code,
+            msg.byteLength ? encoder.decode(msg) : undefined
+          );
       },
     });
 
-    let routes = this.routes;
+    let routes = this.Apis;
     Object.keys(routes).forEach((k) => {
       let r = routes[k];
       this.socket[r.type || "any"](r.path, r.page);
