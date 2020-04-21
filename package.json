@@ -15,6 +15,7 @@
     "dotenv": "^8.2.0",
     "mysql": "github:mysqljs/mysql",
     "node-redis-scan": "^1.1.1",
+    "protobufjs": "^6.8.9",
     "redis": "^3.0.2",
     "socket.io": "^2.3.0",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v17.3.0",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "artillery": "^1.6.0",
-    "nodemon": "^2.0.2"
+    "nodemon": "^2.0.2",
+    "websocket": "^1.0.31"
   }
 }

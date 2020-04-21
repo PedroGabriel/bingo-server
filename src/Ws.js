@@ -6,8 +6,9 @@ class Ws {
   Apis = require("./Api");
   clients = {};
 
+  testers = []; // the SIDs that gonna login for testing
   #loadtest = null;
-  #loadtest_hit = null;
+  #loadtest_hit = 0;
 
   init = (port, ssl = {}, listener = {}) => {
     if (process.env.LOGLEVEL == "test") {
@@ -15,14 +16,17 @@ class Ws {
       this.#loadtest_hit = 0;
     }
 
-    listener.open;
-
     this.socket = uWS.App(ssl).ws("/*", {
-      compression: 0,
+      compression: 1,
       maxPayloadLength: 16 * 1024 * 1024,
       idleTimeout: 60 * 5,
       open: (ws, req) => {
         let sid = cookie.get(req, "SID");
+
+        if (this.testers.length) {
+          sid = this.testers[this.#loadtest_hit];
+          this.#loadtest_hit++;
+        }
 
         if (this.#loadtest) {
           this.#loadtest_hit++;
@@ -34,24 +38,44 @@ class Ws {
             .then((result) => {
               if (result && result.id) {
                 ws.id = result.id;
+                ws.name = result.name;
                 ws.sid = sid;
 
-                if (this.clients[ws.id]) this.clients[ws.id].close();
+                if (this.clients[ws.id]) {
+                  try {
+                    this.clients[ws.id].close();
+                  } catch (e) {
+                    // error
+                  }
+                }
 
                 this.clients[ws.id] = ws;
                 if (listener.open) listener.open(ws, req);
-                log.log("connected", ws.id);
-              } else ws.close();
+                log.log("SERVER: CONNECTED", ws.id);
+
+                ws.send = (payload) => ws.send(encoder.encode(payload), true);
+                ws.sendAll = (key, payload) =>
+                  ws.publish(key, encoder.encode(payload), true);
+              } else {
+                try {
+                  ws.close();
+                } catch (e) {}
+              }
             })
-            .catch((err) => ws.close());
-        } else ws.close();
+            .catch((err) => {
+              try {
+                ws.close();
+              } catch (e) {}
+            });
+        } else {
+          try {
+            ws.close();
+          } catch (e) {}
+        }
       },
       message: (ws, msg) => {
         if (listener.message)
-          listener.message(
-            ws,
-            msg.msg.byteLength ? encoder.decode(msg) : undefined
-          );
+          listener.message(ws, msg ? encoder.decode(msg) : undefined);
       },
       drain: (ws) => {
         log.log("WebSocket backpressure: " + ws.getBufferedAmount());
@@ -59,7 +83,9 @@ class Ws {
       },
       close: (ws, code, msg) => {
         if (this.clients[ws.id]) {
-          if (!this.#loadtest) db.del(`session:${this.clients[ws.id].sid}`);
+          if (!this.#loadtest && !this.testers) {
+            db.del(`session:${this.clients[ws.id].sid}`);
+          }
           delete this.clients[ws.id];
         }
         log.log("closed", ws.id ? ws.id : "not logged user");
@@ -81,14 +107,9 @@ class Ws {
     this.socket.listen(parseInt(port), () => {});
   };
 
-  do = (slug, message) => {
-    this.socket.publish(slug, encoder.encode(message));
-    return true;
-  };
-
-  say = (message) => {
-    this.socket.do("announce", encoder.encode(message));
-    return true;
+  send = (key, payload) => {
+    // console.log("SERVER: SENT", key, payload);
+    this.socket.publish(key, encoder.encode(payload), true);
   };
 }
 

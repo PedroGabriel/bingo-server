@@ -1,24 +1,28 @@
-const { uuid, encoder } = require("./Libs");
+const { encoder, keyer } = require("./Libs");
 
 class User {
   app = null;
   ws = null;
+  prefix = "user";
 
   id = null; // uuid
   key = ""; // redis/pub/sub key
   name = "";
 
   channels = {}; // all channels this users ins connected key:Channel
+  party = null; // party this user belongs to
 
   actions = {};
   static actions = this.action;
 
-  do = (message) => this.ws.send(encoder.encode(message));
-  say = (key, message) => this.ws.publish(key, encoder.encode(message));
-
-  sub = (key) => this.ws.subscribe(key);
-  unsub = (key) => this.ws.unsubscribe(key);
-  unsubAll = () => this.ws.unsubscribeAll();
+  get data() {
+    return {
+      user: {
+        id: this.id,
+        name: this.name,
+      },
+    };
+  }
 
   constructor(app, ws) {
     this.app = app;
@@ -26,19 +30,48 @@ class User {
 
     this.id = ws.id;
     this.name = ws.name;
-    this.key = `user:${this.id}`;
+    this.key = keyer(this.prefix, this.id);
     this.app.users[ws.id] = this;
   }
 
-  static create = (app, ws) => {
-    new this(app, ws);
-  };
+  static create = (app, ws) => new this(app, ws);
 
   remove = (user) => {
     user = user ? user : this.app.users[this.id];
     delete this.app.users[user.id];
+    return true;
   };
   static remove = this.remove;
+
+  do = (payload) => {
+    this.ws.send(payload);
+    return this;
+  };
+
+  say = (key, state, action, payload, extras = {}) => {
+    console.log("user say to all at", key);
+    this.ws.sendAll(key, {
+      state,
+      action,
+      ...this.data,
+      payload,
+      ...extras,
+    });
+    return this;
+  };
+
+  sub = (key) => {
+    this.ws.subscribe(key);
+    return this;
+  };
+  unsub = (key) => {
+    this.ws.unsubscribe(key);
+    return this;
+  };
+  unsubAll = () => {
+    this.ws.unsubscribeAll();
+    return this;
+  };
 }
 
 module.exports = User;

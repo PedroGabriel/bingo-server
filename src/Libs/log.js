@@ -1,3 +1,5 @@
+if (!process.env.LOGLEVEL) process.env.LOGLEVEL = "dev";
+
 module.exports = {
   test: function () {
     log("test", arguments);
@@ -15,8 +17,10 @@ module.exports = {
 };
 
 const log = function (type, args) {
+  console.log(...args);
+  return;
   if (!type || !args.length) return;
-  if (process.env.LOGLEVEL.toLowerCase() == type) {
+  if (!process.env.LOGLEVEL || process.env.LOGLEVEL.toLowerCase() == type) {
     console.log(...args);
   }
 };

@@ -1,8 +1,8 @@
 const msgpack = require("@msgpack/msgpack");
-
-const encoder = {
-  encode: buf => msgpack.encode(buf),
-  decode: obj => msgpack.decode(obj)
+module.exports = {
+  encode: (buf) => msgpack.encode(buf),
+  decode: (obj) => {
+    if (obj.type && obj.type == "binary") return msgpack.decode(obj.binaryData);
+    return JSON.parse(new TextDecoder().decode(obj));
+  },
 };
-
-module.exports = encoder;
