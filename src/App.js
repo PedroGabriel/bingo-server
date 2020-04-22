@@ -10,6 +10,7 @@ class App extends Ws {
   users = {};
   party = {};
   channels = {};
+  rooms = {};
 
   constructor(port, ssl) {
     super();
@@ -18,7 +19,7 @@ class App extends Ws {
 
   on = {
     open: (ws) => {
-      User.create(this, ws).sub("announce");
+      new User(this, ws).sub("announce");
     },
     message: (ws, msg) => {
       console.log("FROM", ws.id, msg);
@@ -42,9 +43,17 @@ class App extends Ws {
 
         if (party && party.actions[msg.action]) party.actions[msg.action](args);
       }
+      // nice
 
-      if (msg.state == "channel" && Channel.actions[msg.action])
-        Channel.actions[msg.action](args);
+      if (msg.state == "channel") {
+        let id = msg.id ? msg.id : null;
+        let channel = null;
+        if (id && this.channels[id]) channel = this.channels[id];
+        if (user && user.channels[id]) channel = user.channels[id];
+
+        if (channel && channel.actions[msg.action])
+          channel.actions[msg.action](args);
+      }
 
       if (msg.state == "user" && User.actions[msg.action])
         User.actions[msg.action](args);

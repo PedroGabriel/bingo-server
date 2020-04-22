@@ -34,8 +34,6 @@ class User {
     this.app.users[ws.id] = this;
   }
 
-  static create = (app, ws) => new this(app, ws);
-
   remove = (user) => {
     user = user ? user : this.app.users[this.id];
     delete this.app.users[user.id];

@@ -1,4 +1,6 @@
-console.log("-".repeat(50) + "\n".repeat(8));
+// console.log("-".repeat(50) + "\n".repeat(8));
+// console.log("-".repeat(50));
+// console.clear();
 require("dotenv").config();
 const Client = require("./tests/client");
 
@@ -45,3 +47,5 @@ Object.keys(players).forEach((key) => {
     new Client(key, players[key], message);
   }, key * delay);
 });
+
+console.log(Server);

@@ -25,13 +25,13 @@ class AbstractParty {
     this.id = uuid();
     this.key = keyer(this.namespace, this.id);
     this.app.party[this.id] = this;
-    this.leader = User.id;
+    this.leader = User;
     this.join(User);
   }
 
   setLeader = (User) => {
     if (!User) return false;
-    this.leader = User.id;
+    this.leader = User;
     this.say("leader", User.data);
   };
 
@@ -47,7 +47,7 @@ class AbstractParty {
     let newLeader = false;
     if (
       payload.user.id &&
-      User.id == this.leader &&
+      User.id == this.leader.id &&
       this.app.users[payload.user.id] &&
       this.app.users[payload.user.id].party.id == this.id
     ) {
@@ -70,8 +70,8 @@ class AbstractParty {
   };
 
   getLeader = () => {
-    if (!this.leader || !this.users[this.leader]) return false;
-    return this.users[this.leader];
+    if (!this.leader) return false;
+    return this.leader;
   };
 
   join = (User) => {
@@ -87,7 +87,7 @@ class AbstractParty {
     delete this.users[User.id];
     this.say("leave", User.data);
     User.unsub(this.key);
-    if (User.id === this.leader) this.newRandomLeader();
+    if (User.id === this.leader.id) this.newRandomLeader();
     if (this.isEmpty()) this.remove();
     return this;
   };
