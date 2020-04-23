@@ -1,4 +1,4 @@
-import Client from "./tests/client";
+import Client from "#/tests/client";
 
 // {
 //   key_file_name: "misc/key.pem",

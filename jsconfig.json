@@ -11,6 +11,11 @@
             ]
         }
     },
+    "include": [
+        "src/*",
+        "tests/*",
+        "index.js"
+    ],
     "exclude": [
         "node_modules",
         "dist"
