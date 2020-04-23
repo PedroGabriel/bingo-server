@@ -1,6 +1,6 @@
 if (!process.env.LOGLEVEL) process.env.LOGLEVEL = "dev";
 
-module.exports = {
+export default {
   test: function () {
     log("test", arguments);
   },

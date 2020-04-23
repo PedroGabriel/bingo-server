@@ -1,4 +1,4 @@
-const { uuid, encoder } = require("./Libs");
+import { uuid, encoder } from "@/Libs";
 class Channel {
   app = null;
 
@@ -14,4 +14,4 @@ class Channel {
   }
 }
 
-module.exports = Channel;
+export default Channel;

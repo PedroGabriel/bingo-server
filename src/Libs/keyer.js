@@ -1,6 +1,6 @@
 const separator = ":";
 
-module.exports = function (key, byArgs = false) {
+export default function (key, byArgs = false) {
   let parsed;
 
   if (byArgs) {
@@ -30,4 +30,4 @@ module.exports = function (key, byArgs = false) {
   }
 
   return "";
-};
+}

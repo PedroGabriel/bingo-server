@@ -1,4 +1,4 @@
-const { uuid, db } = require("../Libs");
+import { uuid, db } from "@/Libs";
 
 class Channel {
   #id = ""; // The unique id
@@ -127,4 +127,4 @@ class Channel {
   };
 }
 
-module.exports = Channel;
+export default Channel;

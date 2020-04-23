@@ -1,4 +1,4 @@
-const { encoder, keyer } = require("./Libs");
+import { keyer } from "@/Libs";
 
 class User {
   app = null;
@@ -72,4 +72,4 @@ class User {
   };
 }
 
-module.exports = User;
+export default User;

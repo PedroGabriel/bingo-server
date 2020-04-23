@@ -1,4 +1,4 @@
-let mysql = require("mysql");
+import mysql from "mysql";
 
 const server = {
   host: "localhost",
@@ -7,4 +7,4 @@ const server = {
   database: "bingo",
   port: 3305,
 };
-module.exports = mysql.createConnection(server);
+export default mysql.createConnection(server);

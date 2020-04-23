@@ -1,7 +1,7 @@
-const { readJson } = require("../Libs");
-const Auth = require("../Auth.js");
+import { readJson } from "@/Libs";
+import Auth from "@/Auth.js";
 
-module.exports = {
+export default {
   name: "guest",
   path: "/guest",
   type: "post",

@@ -1,4 +1,4 @@
-module.exports = (res, cb, err) => {
+export default (res, cb, err) => {
   let buffer;
   /* Register data cb */
   res.onData((ab, isLast) => {

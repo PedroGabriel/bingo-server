@@ -1,5 +1,5 @@
-const { db, uuid, unix } = require("../Libs");
-const AbstractChannel = require("../Abstract/Channel");
+import { db, uuid, unix } from "@/Libs";
+import AbstractChannel from "@/Abstract/Channel";
 
 class Channel extends AbstractChannel {
   static name = "home";
@@ -16,4 +16,4 @@ class Channel extends AbstractChannel {
   }
 }
 
-module.exports = Channel;
+export default Channel;

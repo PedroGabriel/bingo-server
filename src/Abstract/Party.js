@@ -1,4 +1,4 @@
-const { uuid, keyer } = require("../Libs");
+import { uuid, keyer } from "@/Libs";
 
 class AbstractParty {
   app = null;
@@ -14,6 +14,7 @@ class AbstractParty {
     return {
       party: {
         id: this.id,
+        leader: this.leader?.id,
         // name: this.name ? this.name : "",
       },
     };
@@ -110,4 +111,4 @@ class AbstractParty {
   };
 }
 
-module.exports = AbstractParty;
+export default AbstractParty;

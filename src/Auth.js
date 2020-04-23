@@ -1,6 +1,6 @@
-const { uuid, md5, mysql, cookie, db } = require("./Libs");
+import { uuid, md5, mysql, cookie, db } from "@/Libs";
 
-module.exports = {
+export default {
   register: (res, name, email, password) => {
     return new Promise((resolve, reject) => {
       mysql.query(

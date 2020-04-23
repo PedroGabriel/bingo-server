@@ -1,6 +1,6 @@
-const cookie_parser = require("cookie");
+import cookie_parser from "cookie";
 
-module.exports = {
+export default {
   set: (res, key, value = undefined) => {
     if (!key) return false;
     if (typeof value !== "undefined") {

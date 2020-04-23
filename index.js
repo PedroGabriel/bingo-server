@@ -1,8 +1,4 @@
-// console.log("-".repeat(50) + "\n".repeat(8));
-// console.log("-".repeat(50));
-// console.clear();
-require("dotenv").config();
-const Client = require("./tests/client");
+import Client from "./tests/client";
 
 // {
 //   key_file_name: "misc/key.pem",
@@ -10,7 +6,7 @@ const Client = require("./tests/client");
 //     passphrase: "1234",
 // }
 
-const App = require("./src/App");
+import App from "@/App";
 const Server = new App(process.env.PORT_BINGO || 5000);
 Server.testers = [
   "673c6d1a-7e0a-11ea-916c-fcaa14fc2b9b",
@@ -30,6 +26,7 @@ const players = {
   1: {
     connect: (id, ws) => {
       if (!ws.connected) return;
+      // ws.send(JSON.stringify({ state: "party", action: "create" }));
     },
     message: (id, msg) => {},
   },
@@ -48,4 +45,4 @@ Object.keys(players).forEach((key) => {
   }, key * delay);
 });
 
-console.log(Server);
+// console.log(Server);

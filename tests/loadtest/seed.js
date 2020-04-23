@@ -1,7 +1,5 @@
-require("dotenv").config();
-
-const db = require("../../src/Libs/db");
-const mysql = require("../../src/Libs/mysql");
+import db from ("@/Libs/db");
+import mysql from ("@/Libs/mysql");
 let keys = 0;
 
 mysql.query(

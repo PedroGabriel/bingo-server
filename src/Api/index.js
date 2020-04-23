@@ -5,7 +5,7 @@ require("fs")
   .readdirSync(normalizedPath)
   .forEach(function (file) {
     if (file == "index.js") return;
-    let route = require("./" + file);
+    let route = require("./" + file).default;
     routes[route.name] = { ...route };
   });
 

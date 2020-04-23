@@ -1,5 +1,5 @@
-const { encoder } = require("../../src/Libs");
-const WebSocketClient = require("websocket").client;
+import { encoder } from "@/Libs";
+import WebSocketClient from "websocket";
 
 const debug = 0;
 
@@ -9,7 +9,7 @@ class Client {
 
   constructor(id, { connect = () => {}, message = () => {} }, globalMessage) {
     this.id = id;
-    this.client = new WebSocketClient();
+    this.client = new WebSocketClient.client();
     this.client.connect("ws://localhost:5000");
 
     this.client.on("connectFailed", function (error) {
@@ -36,4 +36,4 @@ class Client {
   }
 }
 
-module.exports = Client;
+export default Client;

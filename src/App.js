@@ -1,10 +1,10 @@
-const { uuid, md5, mysql, cookie, db, encoder } = require("./Libs");
-const Ws = require("./Ws");
-const User = require("./User");
-const Party = require("./Party");
-const Channel = require("./Channel");
+import { uuid, md5, mysql, cookie, db, encoder } from "@/Libs";
+import Ws from "@/Ws";
+import User from "@/User";
+import Party from "@/Party";
+import Channel from "@/Channel";
 
-// const channels = require("./Channels");
+// import channels from "@/Channels";
 
 class App extends Ws {
   users = {};
@@ -74,4 +74,4 @@ class App extends Ws {
   };
 }
 
-module.exports = App;
+export default App;

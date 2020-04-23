@@ -15,7 +15,7 @@ const rule = [
 ];
 let all_test = true;
 
-module.exports = (gap_per_col = 15) => {
+export default (gap_per_col = 15) => {
   for (test = 1; test <= 1; test++) {
     let used = {};
     let test_passed = true;

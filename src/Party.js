@@ -1,4 +1,4 @@
-const AbstractParty = require("./Abstract/Party");
+import AbstractParty from "@/Abstract/Party";
 
 class Party extends AbstractParty {
   constructor({ App, User }) {
@@ -13,4 +13,4 @@ class Party extends AbstractParty {
   };
 }
 
-module.exports = Party;
+export default Party;

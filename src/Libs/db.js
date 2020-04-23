@@ -1,6 +1,6 @@
-const redis = require("redis");
-const { promisify } = require("util");
-const redisScan = require("node-redis-scan");
+import redis from "redis";
+import { promisify } from "util";
+import redisScan from "node-redis-scan";
 
 const client = redis.createClient();
 const scanner = new redisScan(client);
@@ -69,4 +69,4 @@ client.one = (match, cb = null) => {
 client.on("connect", () => {});
 client.on("error", (err) => console.log("REDIS ERROR", err));
 
-module.exports = client;
+export default client;

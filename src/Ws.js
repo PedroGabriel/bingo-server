@@ -1,9 +1,9 @@
-const { db, encoder, cookie, log } = require("./Libs");
-const uWS = require("uWebSockets.js");
+import { db, encoder, cookie, log } from "@/Libs";
+import uWS from "uWebSockets.js";
 
 class Ws {
   socket = null;
-  Apis = require("./Api");
+  Apis = require("@/Api");
   clients = {};
 
   testers = []; // the SIDs that gonna login for testing
@@ -12,7 +12,7 @@ class Ws {
 
   init = (port, ssl = {}, listener = {}) => {
     if (process.env.LOGLEVEL == "test") {
-      this.#loadtest = require("../tests/loadtest/session_ids");
+      this.#loadtest = require("#/tests/loadtest/session_ids");
       this.#loadtest_hit = 0;
     }
 
@@ -113,4 +113,4 @@ class Ws {
   };
 }
 
-module.exports = Ws;
+export default Ws;

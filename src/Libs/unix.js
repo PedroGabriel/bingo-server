@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   now: () => {
     return Math.floor(new Date() / 1000);
   },
