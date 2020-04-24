@@ -1,15 +1,12 @@
-import { uuid, md5, mysql, cookie, db, encoder } from "@/Libs";
 import Ws from "@/Ws";
 import User from "@/User";
 import Party from "@/Party";
-import Channel from "@/Channel";
-
-// import channels from "@/Channels";
+import Rooms from "@/Rooms";
 
 class App extends Ws {
   users = {};
   party = {};
-  channels = {};
+  // channels = {};
   rooms = {};
 
   constructor(port, ssl) {
@@ -19,7 +16,8 @@ class App extends Ws {
 
   on = {
     open: (ws) => {
-      new User(this, ws).sub("announce");
+      let user = new User(this, ws).sub("announce");
+      // Rooms["main"].join(user);
     },
     message: (ws, msg) => {
       console.log("FROM", ws.id, msg);
@@ -27,40 +25,34 @@ class App extends Ws {
       msg.state = msg.state.toLowerCase();
       msg.action = msg.action.toLowerCase();
 
-      let user = this.users[ws.id] ? this.users[ws.id] : null;
-      let args = {
-        App: this,
-        User: user,
-        payload: msg.payload ? msg.payload : {},
-      };
+      let user = this.users?.[ws.id];
+      let id = msg?.id;
 
       if (msg.state == "party") {
-        let id = msg.id ? msg.id : null;
         let party = null;
-        if (msg.action == "create" && !id) new Party(args);
+        if (msg.action == "create" && !id) new Party(this, user);
         if (id && this.party[id]) party = this.party[id];
         if (user && user.party) party = user.party;
 
-        if (party && party.actions[msg.action]) party.actions[msg.action](args);
+        if (party && party.actions[msg.action])
+          party.actions[msg.action](user, msg?.payload);
       }
-      // nice
 
-      if (msg.state == "channel") {
-        let id = msg.id ? msg.id : null;
-        let channel = null;
-        if (id && this.channels[id]) channel = this.channels[id];
-        if (user && user.channels[id]) channel = user.channels[id];
+      // if (msg.state == "channel") {
+      //   let channel = null;
+      //   if (id && this.channels[id]) channel = this.channels[id];
+      //   if (user && user.channels[id]) channel = user.channels[id];
 
-        if (channel && channel.actions[msg.action])
-          channel.actions[msg.action](args);
-      }
+      //   if (channel && channel.actions[msg.action])
+      //     channel.actions[msg.action](user, msg?.payload);
+      // }
 
       if (msg.state == "user" && User.actions[msg.action])
-        User.actions[msg.action](args);
+        User.actions[msg.action](user, msg?.payload);
     },
     close: (ws) => {
-      let user = this.users[ws.id] ? this.users[ws.id] : null;
-      if (user) user.remove();
+      let user = this.users?.[ws.id];
+      user?.remove();
     },
   };
 

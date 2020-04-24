@@ -1,26 +1,26 @@
 import { uuid, keyer } from "@/Libs";
 
 class AbstractParty {
-  app = null;
   namespace = "party";
+  app;
 
-  id = null; // uuid
-  key = ""; // redis/pub/sub key
+  id; // uuid
+  key; // redis/pub/sub key
 
-  leader = null; // id of this party leader
+  leader; // id of this party leader
   users = {}; // all users inside this party
 
   get data() {
     return {
-      party: {
+      [this.namespace]: {
         id: this.id,
         leader: this.leader?.id,
-        // name: this.name ? this.name : "",
+        // name: this.name ?? "",
       },
     };
   }
 
-  constructor({ App, User }) {
+  constructor(App, User) {
     this.app = App;
 
     this.id = uuid();
@@ -94,8 +94,8 @@ class AbstractParty {
   };
 
   remove = (Party = null) => {
-    Party = Party ? Party : this.app.party[this.id];
-    delete this.app.party[this.id];
+    Party = Party ?? this.app.party?.[this.id];
+    delete this.app.party?.[Party.id];
     return true;
   };
 

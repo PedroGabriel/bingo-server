@@ -11,7 +11,7 @@ export default function (key, byArgs = false) {
     parsed = {};
     let pairs = key.split(":");
     for (let i = 0; i < pairs.length; i++) {
-      parsed[pairs[i]] = pairs[i + 1] ? pairs[i + 1] : null;
+      parsed[pairs[i]] = pairs[i + 1] ?? null;
       i++;
     }
     return parsed;

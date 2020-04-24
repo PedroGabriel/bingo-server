@@ -88,7 +88,7 @@ class Ws {
           }
           delete this.clients[ws.id];
         }
-        log.log("closed", ws.id ? ws.id : "not logged user");
+        log.log("closed", ws.id ?? "not logged user");
         if (listener.close)
           listener.close(
             ws,
