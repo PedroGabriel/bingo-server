@@ -30,38 +30,14 @@ class AbstractParty {
     this.join(User);
   }
 
-  setLeader = (User) => {
-    if (!User) return false;
-    this.leader = User;
-    this.say("leader", User.data);
-  };
-
   isEmpty = () => Object.keys(this.users).length === 0;
+  isMember = (User) => this.id === User.party?.id;
 
   chat = (User, payload) => {
+    if (!this.isMember(User)) return false;
     if (!payload.message) return false;
     this.say("chat", { ...User.data, message: payload.message });
     return this;
-  };
-
-  newLeader = (User = null, payload = {}) => {
-    let newLeader = false;
-    if (
-      payload.user.id &&
-      User.id == this.leader.id &&
-      this.app.users[payload.user.id] &&
-      this.app.users[payload.user.id].party.id == this.id
-    ) {
-      newLeader = this.app.users[payload.user.id];
-    }
-    if (!newLeader) return false;
-    this.setLeader(newLeader);
-  };
-
-  newRandomLeader = () => {
-    let User = this.getRandomUser();
-    if (!User) return false;
-    this.setLeader(User);
   };
 
   getRandomUser = () => {
@@ -69,10 +45,24 @@ class AbstractParty {
     let keys = Object.keys(this.users);
     return this.users[keys[(keys.length * Math.random()) << 0]];
   };
-
-  getLeader = () => {
-    if (!this.leader) return false;
-    return this.leader;
+  setLeader = (User) => {
+    this.leader = User;
+    this.say("leader", User.data);
+    return this;
+  };
+  getLeader = () => this.leader ?? null;
+  isLeader = (User) => User.id === this.leader?.id;
+  newLeader = (User = null, payload = {}) => {
+    if (!this.isMember(User)) return this;
+    if (!payload?.user.id || !this.isLeader(User)) return this;
+    this.setLeader(this.app.users[payload.user.id]);
+    return this;
+  };
+  newRandomLeader = () => {
+    let User = this.getRandomUser();
+    if (!User) return false;
+    this.setLeader(User);
+    return this;
   };
 
   join = (User) => {
@@ -85,10 +75,12 @@ class AbstractParty {
   };
 
   leave = (User) => {
+    if (!this.isMember(User)) return this;
     delete this.users[User.id];
     this.say("leave", User.data);
     User.unsub(this.key);
-    if (User.id === this.leader.id) this.newRandomLeader();
+    User.party = null;
+    if (this.isLeader(User)) this.newRandomLeader();
     if (this.isEmpty()) this.remove();
     return this;
   };

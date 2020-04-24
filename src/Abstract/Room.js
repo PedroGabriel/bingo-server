@@ -11,6 +11,7 @@ class Room {
   users = {}; // All users inside this room
   usersCount = 0; // Total users inside this room
 
+  owner; // the user that own this room (can tweak settings)
   party; // If this is a party room, party object
 
   states = {
@@ -21,17 +22,25 @@ class Room {
   state; // Current room state
   full; // kinda obvious
 
-  options = {
-    // single: true, // If only a single room (sub) of this should exists
-    // allowParty: false, // if a party room can be created
-    // announce: true, // pub to room when new player join
-    // lobby: '', // pub to this sub player join or state change
-    // maxUsers: 0, // Max users in this room
-    // minUsers: 1, // Min players to start the room logic running
-    // canClose: false, // if this room can be set to closed to prevent users join
+  static options = {
+    single: true, // If only a single room (sub) of this should exists
+    ownable: false, // if a user can create this room, false when single
+    announce: true, // pub to room when new player join
+    lobby: "", // pub to this sub player count change or state change
+    maxUsers: 0, // Max users in this room
+    minUsers: 1, // Min players to start the room logic running
+    canClose: false, // if this room can be set to closed to prevent users join
   };
 
   get data() {
+    return {
+      [this.namespace]: {
+        id: this.id,
+      },
+    };
+  }
+
+  get updateData() {
     return {
       [this.namespace]: {
         id: this.id,
@@ -43,14 +52,15 @@ class Room {
     };
   }
 
-  constructor(App, name, Party = null, options = {}) {
+  constructor(App, name, User = null, options = {}) {
     this.id = uuid();
     this.app = App;
     this.name = name;
-    this.options = options;
-    if (this.options.single) this.options.allowParty = false;
-    if (this.options.allowParty) this.party = Party;
-    this.init();
+    this.options = { ...this.options, ...options };
+    if (this.options.single) this.options.ownable = false;
+    if (this.options.ownable && User.party) this.party = User.party;
+    this.init().join?.(User);
+    this.owner = User;
   }
 
   say = (action, payload, extras = {}) => {
@@ -69,28 +79,27 @@ class Room {
     this.app.say(this.options.lobby, {
       state: this.namespace,
       action: "update",
-      ...this.data,
+      ...this.updateData,
     });
     return this;
   };
 
   join = (User) => {
     if (this.state != this.states.open || this.full) return false;
-    if (this.party && User.party?.id != this.party.id) return false;
+    if (this.party && !this.party.isMember(User)) return false;
     if (!this.#addUser(User)) return false;
 
     if (this.options.announce) this.say("join", User.data);
     this.update();
-
-    return true;
+    return this;
   };
 
   leave = (User) => {
     if (!this.#removeUser(User)) return false;
 
     if (this.options.announce) this.say("leave", User.data);
+    if (this.isOwner(User)) this.newRandomOwner();
     this.update();
-
     return true;
   };
 
@@ -107,6 +116,7 @@ class Room {
     if (this.users[user.id]) return false;
     User.sub(this.key);
     this.users[User.id] = User;
+    User.room = this;
     this.usersCount++;
     if (this.options.maxUsers && this.usersCount >= this.options.maxUsers)
       this.setFull(true);
@@ -117,10 +127,40 @@ class Room {
     if (!this.users[user.id]) return false;
     User.unsub(this.key);
     delete this.users[User.id];
+    User.room = null;
     this.usersCount--;
     if (this.options.maxUsers && this.usersCount < this.options.maxUsers)
       this.setFull(false);
     return true;
+  };
+
+  isEmpty = () => Object.keys(this.users).length === 0;
+  isMember = (User) => this.id === User.room?.id;
+
+  getRandomUser = () => {
+    if (this.isEmpty()) return false;
+    let keys = Object.keys(this.users);
+    return this.users[keys[(keys.length * Math.random()) << 0]];
+  };
+  setOwner = (User) => {
+    this.owner = User;
+    this.say("owner", User.data);
+    return this;
+  };
+  getOwner = () => this.owner ?? null;
+  isOwner = (User) => User.id === this.owner?.id;
+  newOwner = (User = null, payload = {}) => {
+    if (!this.isMember(User)) return this;
+    if (!payload?.user.id || !this.isOwner(User)) return this;
+    this.say("owner", User.data);
+    this.setOwner(this.app.users[payload.user.id]);
+    return this;
+  };
+  newRandomOwner = () => {
+    let User = this.getRandomUser();
+    if (!User) return false;
+    this.setOwner(User);
+    return this;
   };
 
   init = () => {

@@ -16,8 +16,8 @@ class App extends Ws {
 
   on = {
     open: (ws) => {
-      let user = new User(this, ws).sub("announce");
-      // Rooms["main"].join(user);
+      const user = new User(this, ws).sub("announce");
+      // Rooms["main"].join(me);
     },
     message: (ws, msg) => {
       console.log("FROM", ws.id, msg);
@@ -25,14 +25,14 @@ class App extends Ws {
       msg.state = msg.state.toLowerCase();
       msg.action = msg.action.toLowerCase();
 
-      let user = this.users?.[ws.id];
-      let id = msg?.id;
+      const user = this.users?.[ws.id];
+      const id = msg?.id;
 
       if (msg.state == "party") {
         let party = null;
         if (msg.action == "create" && !id) new Party(this, user);
-        if (id && this.party[id]) party = this.party[id];
         if (user && user.party) party = user.party;
+        if (id && this.party[id]) party = this.party[id];
 
         if (party && party.actions[msg.action])
           party.actions[msg.action](user, msg?.payload);
@@ -51,7 +51,7 @@ class App extends Ws {
         User.actions[msg.action](user, msg?.payload);
     },
     close: (ws) => {
-      let user = this.users?.[ws.id];
+      const user = this.users?.[ws.id];
       user?.remove();
     },
   };

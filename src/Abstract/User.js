@@ -31,9 +31,11 @@ class AbstractUser {
     this.app.users[this.id] = this;
   }
 
-  remove = (user) => {
-    user = user ?? this.app.users[this.id];
-    delete this.app.users[user.id];
+  remove = (User) => {
+    User = User ?? this.app.users[this.id];
+    if (User.party) User.party.leave();
+    if (User.room) User.room.leave();
+    delete this.app.users[User.id];
     return true;
   };
   static remove = this.remove;
