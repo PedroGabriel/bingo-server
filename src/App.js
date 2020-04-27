@@ -6,7 +6,6 @@ import Rooms from "@/Rooms";
 class App extends Ws {
   users = {};
   party = {};
-  // channels = {};
   rooms = {};
 
   constructor(port, ssl) {
@@ -17,7 +16,8 @@ class App extends Ws {
   on = {
     open: (ws) => {
       const user = new User(this, ws).sub("announce");
-      // Rooms["main"].join(me);
+      this.go("main", user);
+      // Rooms["main"].join(user);
     },
     message: (ws, msg) => {
       console.log("FROM", ws.id, msg);
@@ -63,6 +63,30 @@ class App extends Ws {
   announce = (payload) => {
     this.say("announce", payload);
     return this;
+  };
+
+  go = (name, User, key = "") => {
+    let Room;
+    if (key) Room = this.rooms?.[name]?.[key];
+    if (!Room) Room = this.rooms?.[name];
+    if (!Room) {
+      if (Rooms[name].options?.autoCreate) {
+        return new Rooms[name](this, User);
+      }
+      return false;
+    }
+
+    if (Room.options?.single) return Room.join(User);
+    if (Room?.full) {
+      let joined;
+      let keys = Object.keys(this.rooms[name]);
+      for (let i = 0; i < keys.length; i++) {
+        joined = this.rooms[name][keys[i]].join(User);
+        if (joined) break;
+      }
+      return joined;
+    }
+    return Room.join(User);
   };
 }
 

@@ -1,3 +1,5 @@
+// console.clear();
+
 import Client from "#/tests/client";
 
 // {

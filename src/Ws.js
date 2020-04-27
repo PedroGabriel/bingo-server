@@ -1,6 +1,11 @@
 import { db, encoder, cookie, log } from "@/Libs";
 import uWS from "uWebSockets.js";
 
+const handleErrors = (error) => {
+  handleErrors(error);
+  process.exit(1);
+};
+
 class Ws {
   socket = null;
   Apis = require("@/Api");
@@ -9,6 +14,8 @@ class Ws {
   testers = []; // the SIDs that gonna login for testing
   #loadtest = null;
   #loadtest_hit = 0;
+
+  constructor() {}
 
   init = (port, ssl = {}, listener = {}) => {
     if (process.env.LOGLEVEL == "test") {
@@ -50,7 +57,13 @@ class Ws {
                 }
 
                 this.clients[ws.id] = ws;
-                if (listener.open) listener.open(ws, req);
+                if (listener.open) {
+                  try {
+                    listener.open(ws, req);
+                  } catch (error) {
+                    handleErrors(error);
+                  }
+                }
                 log.log("SERVER: CONNECTED", ws.id);
 
                 ws.send = (payload) => ws.send(encoder.encode(payload), true);
@@ -74,12 +87,23 @@ class Ws {
         }
       },
       message: (ws, msg) => {
-        if (listener.message)
-          listener.message(ws, msg ? encoder.decode(msg) : undefined);
+        if (listener.message) {
+          try {
+            listener.message(ws, msg ? encoder.decode(msg) : undefined);
+          } catch (error) {
+            handleErrors(error);
+          }
+        }
       },
       drain: (ws) => {
         log.log("WebSocket backpressure: " + ws.getBufferedAmount());
-        if (listener.drain) listener.drain(ws);
+        if (listener.drain) {
+          try {
+            listener.drain(ws);
+          } catch (error) {
+            console.log(erro);
+          }
+        }
       },
       close: (ws, code, msg) => {
         if (this.clients[ws.id]) {
@@ -89,12 +113,17 @@ class Ws {
           delete this.clients[ws.id];
         }
         log.log("closed", ws.id ?? "not logged user");
-        if (listener.close)
-          listener.close(
-            ws,
-            code,
-            msg.byteLength ? encoder.decode(msg) : undefined
-          );
+        if (listener.close) {
+          try {
+            listener.close(
+              ws,
+              code,
+              msg.byteLength ? encoder.decode(msg) : undefined
+            );
+          } catch (error) {
+            console.log(erro);
+          }
+        }
       },
     });
 

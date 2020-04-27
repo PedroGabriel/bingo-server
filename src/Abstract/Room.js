@@ -1,4 +1,4 @@
-import { uuid, db, keyer } from "@/Libs";
+import { uuid, db, keyer, unix } from "@/Libs";
 
 class Room {
   namespace = "room";
@@ -24,6 +24,7 @@ class Room {
 
   static options = {
     single: true, // If only a single room (sub) of this should exists
+    autoCreate: true, // if a new room should be created if noone is available
     ownable: false, // if a user can create this room, false when single
     announce: true, // pub to room when new player join
     lobby: "", // pub to this sub player count change or state change
@@ -36,6 +37,7 @@ class Room {
     return {
       [this.namespace]: {
         id: this.id,
+        name: this.name,
       },
     };
   }
@@ -53,14 +55,25 @@ class Room {
   }
 
   constructor(App, name, User = null, options = {}) {
+    this.options = { ...this.options, ...options };
+    if (this.options.single) {
+      this.options.ownable = false;
+      this.options.autoCreate = false;
+    }
+    if (this.options.ownable && User.party) this.party = User.party;
     this.id = uuid();
     this.app = App;
     this.name = name;
-    this.options = { ...this.options, ...options };
-    if (this.options.single) this.options.ownable = false;
-    if (this.options.ownable && User.party) this.party = User.party;
+
+    if (this.options?.single && !this.app.rooms[this.name]) {
+      this.app.rooms[this.name] = this;
+    } else {
+      if (!this.app.rooms[this.name]) this.app.rooms[this.name] = {};
+      this.app.rooms[this.name][this.id] = this;
+    }
+
+    if (this.ownable) this.owner = User;
     this.init().join?.(User);
-    this.owner = User;
   }
 
   say = (action, payload, extras = {}) => {
@@ -113,7 +126,7 @@ class Room {
   busy = () => this.setState(this.states.busy);
 
   #addUser = (User) => {
-    if (this.users[user.id]) return false;
+    if (this.users[User.id]) return false;
     User.sub(this.key);
     this.users[User.id] = User;
     User.room = this;
@@ -166,17 +179,22 @@ class Room {
   init = () => {
     this.setKey();
     this.setState(this.states.open, false, false);
-
-    db.hmset(this.dbKey, {
-      key: this.key,
-      id: this.id,
-      name: this.name,
-      party: this.party?.id,
-      state: this.state,
-      full: this.full,
-      options: this.options,
-      created_at: unix.now(),
-    });
+    db.hmset(
+      this.dbKey,
+      {
+        key: this.key,
+        id: this.id,
+        name: this.name,
+        party: this.party?.id ?? false,
+        state: this.state,
+        full: this.full,
+        options: JSON.stringify(this.options),
+        created_at: unix.now(),
+      },
+      (error, res) => {
+        if (error) console.log(error);
+      }
+    );
 
     return this;
   };
@@ -206,7 +224,11 @@ class Room {
     if (this.full) newKey.push("full");
 
     newKey = keyer(newKey);
-    db.rename(this.dbKey, newKey);
+    if (this.dbKey) {
+      db.rename(this.dbKey, newKey, (error) => {
+        if (error) console.log(error);
+      });
+    }
     this.dbKey = newKey;
 
     if (update) this.update();
