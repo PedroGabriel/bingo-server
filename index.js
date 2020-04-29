@@ -1,4 +1,7 @@
-// console.clear();
+console.log("\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+console.log("\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+console.clear();
+console.clear();
 
 import Client from "#/tests/client";
 

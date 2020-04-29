@@ -47,6 +47,9 @@ class Ws {
                 ws.id = result.id;
                 ws.name = result.name;
                 ws.sid = sid;
+                ws.do = (payload) => ws.send(encoder.encode(payload), true);
+                ws.toAll = (key, payload) =>
+                  ws.publish(key, encoder.encode(payload), true);
 
                 if (this.clients[ws.id]) {
                   try {
@@ -65,10 +68,6 @@ class Ws {
                   }
                 }
                 log.log("SERVER: CONNECTED", ws.id);
-
-                ws.send = (payload) => ws.send(encoder.encode(payload), true);
-                ws.sendAll = (key, payload) =>
-                  ws.publish(key, encoder.encode(payload), true);
               } else {
                 try {
                   ws.close();
@@ -101,7 +100,7 @@ class Ws {
           try {
             listener.drain(ws);
           } catch (error) {
-            console.log(erro);
+            console.log(error);
           }
         }
       },
@@ -121,7 +120,7 @@ class Ws {
               msg.byteLength ? encoder.decode(msg) : undefined
             );
           } catch (error) {
-            console.log(erro);
+            console.log(error);
           }
         }
       },

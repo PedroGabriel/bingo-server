@@ -32,6 +32,9 @@ class Room {
     minUsers: 1, // Min players to start the room logic running
     canClose: false, // if this room can be set to closed to prevent users join
   };
+  options;
+
+  store = {}; // store given to the public about this room
 
   get data() {
     return {
@@ -43,19 +46,22 @@ class Room {
   }
 
   get updateData() {
-    return {
+    const data = {
       [this.namespace]: {
         id: this.id,
-        maxUsers: this.maxUsers,
-        usersCount: this.usersCount,
-        state: this.state,
-        full: this.full,
+        maxUsers: this.maxUsers ?? 0,
+        usersCount: this.usersCount ?? 0,
+        state: this.state ?? this.states.open,
+        full: this.full ?? false,
       },
     };
+    if (Object.keys(this.store).length !== 0)
+      data[this.namespace].store = { ...this.store };
+    return data;
   }
 
   constructor(App, name, User = null, options = {}) {
-    this.options = { ...this.options, ...options };
+    this.options = { ...Room.options, ...options };
     if (this.options.single) {
       this.options.ownable = false;
       this.options.autoCreate = false;
@@ -65,8 +71,8 @@ class Room {
     this.app = App;
     this.name = name;
 
-    if (this.options?.single && !this.app.rooms[this.name]) {
-      this.app.rooms[this.name] = this;
+    if (this.options?.single) {
+      if (!this.app.rooms[this.name]) this.app.rooms[this.name] = this;
     } else {
       if (!this.app.rooms[this.name]) this.app.rooms[this.name] = {};
       this.app.rooms[this.name][this.id] = this;
@@ -100,15 +106,38 @@ class Room {
   join = (User) => {
     if (this.state != this.states.open || this.full) return false;
     if (this.party && !this.party.isMember(User)) return false;
-    if (!this.#addUser(User)) return false;
+
+    if (this.users[User.id]) return false;
+    this.users[User.id] = User;
+    User.room = this;
+    this.usersCount++;
+    if (this.options.maxUsers && this.usersCount >= this.options.maxUsers)
+      this.setFull(true, false);
 
     if (this.options.announce) this.say("join", User.data);
-    this.update();
+    User.do({
+      state: this.namespace,
+      action: "join",
+      ...this.data,
+      ...this.updateData,
+    });
+    setTimeout(() => {
+      User.sub(this.key);
+      this.update();
+    });
     return this;
   };
 
   leave = (User) => {
-    if (!this.#removeUser(User)) return false;
+    if (!this.users[User.id]) return false;
+    try {
+      User.unsub(this.key);
+    } catch (error) {}
+    delete this.users[User.id];
+    User.room = null;
+    this.usersCount--;
+    if (this.options.maxUsers && this.usersCount < this.options.maxUsers)
+      this.setFull(false, false);
 
     if (this.options.announce) this.say("leave", User.data);
     if (this.isOwner(User)) this.newRandomOwner();
@@ -124,28 +153,6 @@ class Room {
   open = () => this.setState(this.states.open);
   close = () => this.setState(this.states.closed);
   busy = () => this.setState(this.states.busy);
-
-  #addUser = (User) => {
-    if (this.users[User.id]) return false;
-    User.sub(this.key);
-    this.users[User.id] = User;
-    User.room = this;
-    this.usersCount++;
-    if (this.options.maxUsers && this.usersCount >= this.options.maxUsers)
-      this.setFull(true);
-    return true;
-  };
-
-  #removeUser = (User) => {
-    if (!this.users[user.id]) return false;
-    User.unsub(this.key);
-    delete this.users[User.id];
-    User.room = null;
-    this.usersCount--;
-    if (this.options.maxUsers && this.usersCount < this.options.maxUsers)
-      this.setFull(false);
-    return true;
-  };
 
   isEmpty = () => Object.keys(this.users).length === 0;
   isMember = (User) => this.id === User.room?.id;
@@ -235,8 +242,8 @@ class Room {
     return this;
   };
 
-  setFull = (isFull) => {
-    return this.setState(null, isFull);
+  setFull = (isFull, update = true) => {
+    return this.setState(null, isFull, update);
   };
 }
 

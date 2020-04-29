@@ -33,21 +33,21 @@ class AbstractUser {
 
   remove = (User) => {
     User = User ?? this.app.users[this.id];
-    if (User.party) User.party.leave();
-    if (User.room) User.room.leave();
-    delete this.app.users[User.id];
+    if (User.party) User.party.leave(User);
+    if (User.room) User.room.leave(User);
+    // delete this.app.users[User.id];
     return true;
   };
   static remove = this.remove;
 
   do = (payload) => {
-    this.ws.send(payload);
+    this.ws.do(payload);
     return this;
   };
 
   say = (key, state, action, payload, extras = {}) => {
     console.log("user say to all at", key);
-    this.ws.sendAll(key, {
+    this.ws.toAll(key, {
       state,
       action,
       ...this.data,

@@ -16,7 +16,12 @@ class App extends Ws {
   on = {
     open: (ws) => {
       const user = new User(this, ws).sub("announce");
-      this.go("main", user);
+      try {
+        this.go("main", user);
+      } catch (error) {
+        console.log(error);
+      }
+
       // Rooms["main"].join(user);
     },
     message: (ws, msg) => {
@@ -28,7 +33,7 @@ class App extends Ws {
       const user = this.users?.[ws.id];
       const id = msg?.id;
 
-      if (msg.state == "party") {
+      if (typeof Party !== "undefined" && msg.state == "party") {
         let party = null;
         if (msg.action == "create" && !id) new Party(this, user);
         if (user && user.party) party = user.party;
@@ -66,17 +71,22 @@ class App extends Ws {
   };
 
   go = (name, User, key = "") => {
+    const RoomClass = Rooms[name];
+    if (!RoomClass) return false;
+
     let Room;
     if (key) Room = this.rooms?.[name]?.[key];
     if (!Room) Room = this.rooms?.[name];
     if (!Room) {
-      if (Rooms[name].options?.autoCreate) {
-        return new Rooms[name](this, User);
+      if (RoomClass.options?.autoCreate) {
+        return new RoomClass(this, User);
       }
       return false;
     }
 
-    if (Room.options?.single) return Room.join(User);
+    if (RoomClass.options?.single) {
+      return Room.join(User);
+    }
     if (Room?.full) {
       let joined;
       let keys = Object.keys(this.rooms[name]);
@@ -86,6 +96,7 @@ class App extends Ws {
       }
       return joined;
     }
+
     return Room.join(User);
   };
 }

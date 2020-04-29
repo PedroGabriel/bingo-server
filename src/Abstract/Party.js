@@ -76,9 +76,11 @@ class AbstractParty {
 
   leave = (User) => {
     if (!this.isMember(User)) return this;
-    delete this.users[User.id];
+    delete this.users?.[User.id];
     this.say("leave", User.data);
-    User.unsub(this.key);
+    try {
+      User.unsub(this.key);
+    } catch (error) {}
     User.party = null;
     if (this.isLeader(User)) this.newRandomLeader();
     if (this.isEmpty()) this.remove();
