@@ -1,14 +1,14 @@
 import { uuid, keyer } from "@/Libs";
 
-class AbstractParty {
-  namespace = "party";
+class AbstractGroup {
+  namespace = "group";
   app;
 
   id; // uuid
   key; // redis/pub/sub key
 
-  leader; // id of this party leader
-  users = {}; // all users inside this party
+  leader; // id of this group leader
+  users = {}; // all users inside this group
 
   get data() {
     return {
@@ -25,13 +25,13 @@ class AbstractParty {
 
     this.id = uuid();
     this.key = keyer(this.namespace, this.id);
-    this.app.party[this.id] = this;
+    this.app.groups[this.id] = this;
     this.leader = User;
     this.join(User);
   }
 
   isEmpty = () => Object.keys(this.users).length === 0;
-  isMember = (User) => this.id === User.party?.id;
+  isMember = (User) => this.id === User.group?.id;
 
   chat = (User, payload) => {
     if (!this.isMember(User)) return false;
@@ -66,9 +66,9 @@ class AbstractParty {
   };
 
   join = (User) => {
-    if (User.party) User.party.leave(User);
+    if (User.group) User.group.leave(User);
     this.users[User.id] = User;
-    User.party = this;
+    User.group = this;
     User.sub(this.key);
     this.say("join", User.data);
     return this;
@@ -81,15 +81,15 @@ class AbstractParty {
     try {
       User.unsub(this.key);
     } catch (error) {}
-    User.party = null;
+    User.group = null;
     if (this.isLeader(User)) this.newRandomLeader();
     if (this.isEmpty()) this.remove();
     return this;
   };
 
-  remove = (Party = null) => {
-    Party = Party ?? this.app.party?.[this.id];
-    delete this.app.party?.[Party.id];
+  remove = (Group = null) => {
+    Group = Group ?? this.app.groups?.[this.id];
+    delete this.app.groups?.[Group.id];
     return true;
   };
 
@@ -105,4 +105,4 @@ class AbstractParty {
   };
 }
 
-export default AbstractParty;
+export default AbstractGroup;

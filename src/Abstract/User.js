@@ -10,7 +10,7 @@ class AbstractUser {
   name; // user name
 
   room; // the current user this user is
-  party; // party this user belongs to
+  group; // group this user belongs to
 
   get data() {
     return {
@@ -33,7 +33,7 @@ class AbstractUser {
 
   remove = (User) => {
     User = User ?? this.app.users[this.id];
-    if (User.party) User.party.leave(User);
+    if (User.group) User.group.leave(User);
     if (User.room) User.room.leave(User);
     // delete this.app.users[User.id];
     return true;

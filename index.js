@@ -31,7 +31,7 @@ const players = {
   1: {
     connect: (id, ws) => {
       if (!ws.connected) return;
-      // ws.send(JSON.stringify({ state: "party", action: "create" }));
+      // ws.send(JSON.stringify({ state: "group", action: "create" }));
     },
     message: (id, msg) => {},
   },

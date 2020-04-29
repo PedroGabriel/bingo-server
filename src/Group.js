@@ -1,6 +1,6 @@
-import AbstractParty from "@/Abstract/Party";
+import AbstractGroup from "@/Abstract/Group";
 
-class Party extends AbstractParty {
+class Group extends AbstractGroup {
   constructor(App, User) {
     super(App, User);
   }
@@ -13,4 +13,4 @@ class Party extends AbstractParty {
   };
 }
 
-export default Party;
+export default Group;

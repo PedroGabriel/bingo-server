@@ -12,7 +12,7 @@ class Room {
   usersCount = 0; // Total users inside this room
 
   owner; // the user that own this room (can tweak settings)
-  party; // If this is a party room, party object
+  group; // If this is a group room, group object
 
   states = {
     open: "open",
@@ -66,7 +66,7 @@ class Room {
       this.options.ownable = false;
       this.options.autoCreate = false;
     }
-    if (this.options.ownable && User.party) this.party = User.party;
+    if (this.options.ownable && User.group) this.group = User.group;
     this.id = uuid();
     this.app = App;
     this.name = name;
@@ -94,7 +94,7 @@ class Room {
   };
 
   update = () => {
-    if (!this.options.lobby || this.party) return this;
+    if (!this.options.lobby || this.group) return this;
     this.app.say(this.options.lobby, {
       state: this.namespace,
       action: "update",
@@ -105,7 +105,7 @@ class Room {
 
   join = (User) => {
     if (this.state != this.states.open || this.full) return false;
-    if (this.party && !this.party.isMember(User)) return false;
+    if (this.group && !this.group.isMember(User)) return false;
 
     if (this.users[User.id]) return false;
     this.users[User.id] = User;
@@ -192,7 +192,7 @@ class Room {
         key: this.key,
         id: this.id,
         name: this.name,
-        party: this.party?.id ?? false,
+        group: this.group?.id ?? false,
         state: this.state,
         full: this.full,
         options: JSON.stringify(this.options),
@@ -210,9 +210,9 @@ class Room {
     let key = [this.namespace, this.name];
     if (!this.options.single) key.push(this.id);
 
-    if (this.party) {
-      key.push("party");
-      key.push(this.party.id);
+    if (this.group) {
+      key.push("group");
+      key.push(this.group.id);
     }
 
     this.key = keyer(key);

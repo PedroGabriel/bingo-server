@@ -1,11 +1,11 @@
 import Ws from "@/Ws";
 import User from "@/User";
-import Party from "@/Party";
+import Group from "@/Group";
 import Rooms from "@/Rooms";
 
 class App extends Ws {
   users = {};
-  party = {};
+  group = {};
   rooms = {};
 
   constructor(port, ssl) {
@@ -33,14 +33,14 @@ class App extends Ws {
       const user = this.users?.[ws.id];
       const id = msg?.id;
 
-      if (typeof Party !== "undefined" && msg.state == "party") {
-        let party = null;
-        if (msg.action == "create" && !id) new Party(this, user);
-        if (user && user.party) party = user.party;
-        if (id && this.party[id]) party = this.party[id];
+      if (typeof Group !== "undefined" && msg.state == "group") {
+        let group = null;
+        if (msg.action == "create" && !id) new Group(this, user);
+        if (user && user.group) group = user.group;
+        if (id && this.groups[id]) group = this.groups[id];
 
-        if (party && party.actions[msg.action])
-          party.actions[msg.action](user, msg?.payload);
+        if (group && group.actions[msg.action])
+          group.actions[msg.action](user, msg?.payload);
       }
 
       // if (msg.state == "channel") {
