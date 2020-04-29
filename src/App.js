@@ -5,7 +5,7 @@ import Rooms from "@/Rooms";
 
 class App extends Ws {
   users = {};
-  group = {};
+  groups = {};
   rooms = {};
 
   constructor(port, ssl) {
