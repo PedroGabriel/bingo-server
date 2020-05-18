@@ -14,7 +14,7 @@ class App extends Ws {
     this.init(port, ssl, this.on);
 
     this.lobby = new Rooms["lobby"](this);
-    ["mode-50-coins"].forEach((k) => {
+    ["mode-100-coins"].forEach((k) => {
       if (Rooms[k]) new Rooms[k](this);
     });
   }
