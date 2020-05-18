@@ -7,25 +7,30 @@ class App extends Ws {
   users = {};
   groups = {};
   rooms = {};
+  lobby;
 
   constructor(port, ssl) {
     super();
     this.init(port, ssl, this.on);
+
+    this.lobby = new Rooms["lobby"](this);
+    ["mode-50-coins"].forEach((k) => {
+      if (Rooms[k]) new Rooms[k](this);
+    });
   }
 
   on = {
     open: (ws) => {
-      const user = new User(this, ws).sub("announce");
-      try {
-        this.go("main", user);
-      } catch (error) {
-        console.log(error);
-      }
-
-      // Rooms["main"].join(user);
+      new User(this, ws).init().then((user) => {
+        user.sub("announce");
+        try {
+          user.go(this.lobby);
+        } catch (error) {
+          console.log(error);
+        }
+      });
     },
     message: (ws, msg) => {
-      console.log("FROM", ws.id, msg);
       if (!msg.state || !msg.action) return;
       msg.state = msg.state.toLowerCase();
       msg.action = msg.action.toLowerCase();
@@ -43,14 +48,9 @@ class App extends Ws {
           group.actions[msg.action](user, msg?.payload);
       }
 
-      // if (msg.state == "channel") {
-      //   let channel = null;
-      //   if (id && this.channels[id]) channel = this.channels[id];
-      //   if (user && user.channels[id]) channel = user.channels[id];
-
-      //   if (channel && channel.actions[msg.action])
-      //     channel.actions[msg.action](user, msg?.payload);
-      // }
+      if (user.room && msg.state == "room") {
+        user.room?.message?.(user, msg?.action, msg?.payload);
+      }
 
       if (msg.state == "user" && User.actions[msg.action])
         User.actions[msg.action](user, msg?.payload);
@@ -70,34 +70,49 @@ class App extends Ws {
     return this;
   };
 
-  go = (name, User, key = "") => {
+  goCreate = (name, User) => {
     const RoomClass = Rooms[name];
     if (!RoomClass) return false;
 
-    let Room;
-    if (key) Room = this.rooms?.[name]?.[key];
-    if (!Room) Room = this.rooms?.[name];
-    if (!Room) {
-      if (RoomClass.options?.autoCreate) {
-        return new RoomClass(this, User);
-      }
-      return false;
+    if (RoomClass.options?.autoCreate) {
+      if (RoomClass.options?.ownable) return new RoomClass(this, User);
+      return new RoomClass(this).join(User);
     }
+    return false;
+  };
+  goMatch = (name, User) => {
+    const RoomClass = Rooms[name];
+    if (!RoomClass) return false;
 
-    if (RoomClass.options?.single) {
-      return Room.join(User);
+    let joined;
+    const rooms = this.getLobbyRooms();
+    for (let i in rooms) {
+      room = this.rooms[i];
+      if (RoomClass.name !== room.name) continue;
+      joined = room.join(User);
+      if (joined) break;
     }
-    if (Room?.full) {
-      let joined;
-      let keys = Object.keys(this.rooms[name]);
-      for (let i = 0; i < keys.length; i++) {
-        joined = this.rooms[name][keys[i]].join(User);
-        if (joined) break;
-      }
-      return joined;
-    }
-
+    return joined;
+  };
+  goId = (id, User) => {
+    if (!this.rooms[id]) return false;
+    return this.rooms[id].join(User);
+  };
+  goLobby = (User) => {
+    return this.lobby.join(User);
+  };
+  go = (Room, User) => {
     return Room.join(User);
+  };
+
+  getLobbyRooms = () => {
+    const rooms = [];
+    for (let i in this.rooms) {
+      let room = this.rooms[i] ?? false;
+      if (!room || !room.options?.lobby) continue;
+      rooms.push({ ...room.data });
+    }
+    return rooms;
   };
 }
 

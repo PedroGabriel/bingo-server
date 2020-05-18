@@ -1,4 +1,5 @@
-import { uuid, db, keyer, unix } from "@/Libs";
+import { uuid, keyer, getDiff } from "@/Libs";
+// import { db, unix } from "@/Libs";
 
 class Room {
   namespace = "room";
@@ -26,38 +27,54 @@ class Room {
     single: true, // If only a single room (sub) of this should exists
     autoCreate: true, // if a new room should be created if noone is available
     ownable: false, // if a user can create this room, false when single
-    announce: true, // pub to room when new player join
-    lobby: "", // pub to this sub player count change or state change
+    announce: true, // pub to room when new player join or leave
+    lobby: "", // pub to this sub room main data changes
     maxUsers: 0, // Max users in this room
-    minUsers: 1, // Min players to start the room logic running
     canClose: false, // if this room can be set to closed to prevent users join
+    joinFrom: null, // from wich rooms this room can be joined (array of names)
   };
   options;
 
-  store = {}; // store given to the public about this room
+  onUpdateInterval;
+  // storeInterval;
+  // storeForce = false;
+  // children things
+  // store = new Proxy(
+  //   {},
+  //   {
+  //     get: (target, prop) => Reflect.get(target, prop),
+  //     set: (target, prop, value) => {
+  //       let set = Reflect.set(target, prop, value);
+  //       if (this.storeForce) {
+  //         this.storeForce = false;
+  //         this.update();
+  //         return set;
+  //       }
+  //       console.log(prop, value);
+  //       clearTimeout(this.storeInterval);
+  //       this.storeInterval = setTimeout(() => {
+  //         this.update();
+  //       }, 1000);
+  //       return set;
+  //     },
+  //   }
+  // );
+  onCreate; // when room is created
+  onUpdate; // room loop
+  canJoin; // check if the user can join this room
+  onJoin; // when user join
+  onMessage; // when room get messaged
+  onLeave; // when user leave
 
   get data() {
     return {
-      [this.namespace]: {
-        id: this.id,
-        name: this.name,
-      },
+      id: this.id,
+      name: this.name,
+      maxUsers: this.maxUsers ?? 0,
+      usersCount: this.usersCount ?? 0,
+      state: this.state ?? this.states.open,
+      full: this.full ?? false,
     };
-  }
-
-  get updateData() {
-    const data = {
-      [this.namespace]: {
-        id: this.id,
-        maxUsers: this.maxUsers ?? 0,
-        usersCount: this.usersCount ?? 0,
-        state: this.state ?? this.states.open,
-        full: this.full ?? false,
-      },
-    };
-    if (Object.keys(this.store).length !== 0)
-      data[this.namespace].store = { ...this.store };
-    return data;
   }
 
   constructor(App, name, User = null, options = {}) {
@@ -66,48 +83,82 @@ class Room {
       this.options.ownable = false;
       this.options.autoCreate = false;
     }
-    if (this.options.ownable && User.group) this.group = User.group;
+
     this.id = uuid();
     this.app = App;
     this.name = name;
 
-    if (this.options?.single) {
-      if (!this.app.rooms[this.name]) this.app.rooms[this.name] = this;
-    } else {
-      if (!this.app.rooms[this.name]) this.app.rooms[this.name] = {};
-      this.app.rooms[this.name][this.id] = this;
-    }
-
+    if (User && this.options.ownable && User.group) this.group = User.group;
     if (this.ownable) this.owner = User;
-    this.init().join?.(User);
+
+    this.app.rooms[this.id] = this;
+
+    this.init();
+    if (User) this.join(User);
   }
 
   say = (action, payload, extras = {}) => {
     this.app.say(this.key, {
       state: this.namespace,
       action,
-      ...this.data,
+      // [this.namespace]: {
+      //   id: this.id,
+      //   name: this.name,
+      // },
       payload,
       ...extras,
     });
     return this;
   };
 
-  update = () => {
-    if (!this.options.lobby || this.group) return this;
-    this.app.say(this.options.lobby, {
-      state: this.namespace,
-      action: "update",
-      ...this.updateData,
+  do = (action, payload, step = "") => {
+    this.app.say(this.key + (step ? `-${step}` : ""), {
+      action,
+      // [this.namespace]: {
+      //   id: this.id,
+      //   name: this.name,
+      // },
+      payload,
     });
     return this;
   };
 
+  // lobby/group updates
+  lastUpdate = {};
+  update = () => {
+    if (!this.options?.lobby || this.group) return this;
+
+    const data = { ...this.data };
+    const diff = getDiff(this.lastUpdate, data);
+    this.lastUpdate = data;
+    diff.id = data.id;
+    // diff.name = data.name;
+
+    this.app.say(this.options.lobby, {
+      state: this.namespace,
+      action: "update",
+      payload: diff,
+    });
+
+    return this;
+  };
+
+  message = (User, action = "", payload = {}) => {
+    this.onMessage?.(User, action, payload);
+    return this;
+  };
+
   join = (User) => {
+    if (User.room?.id === this.id) return false;
     if (this.state != this.states.open || this.full) return false;
     if (this.group && !this.group.isMember(User)) return false;
+    if (Array.isArray(this.options?.joinFrom)) {
+      if (!this.options.joinFrom.includes(User.room?.name ?? "")) return false;
+    }
+    if (this?.canJoin && this.canJoin?.(User) === false) return false;
 
-    if (this.users[User.id]) return false;
+    if (User.room) User.room.leave(User);
+
     this.users[User.id] = User;
     User.room = this;
     this.usersCount++;
@@ -115,25 +166,30 @@ class Room {
       this.setFull(true, false);
 
     if (this.options.announce) this.say("join", User.data);
-    User.do({
-      state: this.namespace,
-      action: "join",
-      ...this.data,
-      ...this.updateData,
-    });
-    setTimeout(() => {
-      User.sub(this.key);
-      this.update();
+
+    process.nextTick(() => {
+      const data = {
+        state: User.namespace,
+        action: "join",
+        payload: { ...this.data },
+      };
+      // if (Object.keys(this.store).length !== 0) data.store = { ...this.store };
+      User.do(data);
+      setImmediate(() => {
+        User.sub(this.key);
+        this.onJoin?.(User);
+        this.update();
+      });
     });
     return this;
   };
 
   leave = (User) => {
-    if (!this.users[User.id]) return false;
+    if (User.room?.id !== this.id) return false;
     try {
       User.unsub(this.key);
     } catch (error) {}
-    delete this.users[User.id];
+    delete this.users?.[User.id];
     User.room = null;
     this.usersCount--;
     if (this.options.maxUsers && this.usersCount < this.options.maxUsers)
@@ -142,17 +198,21 @@ class Room {
     if (this.options.announce) this.say("leave", User.data);
     if (this.isOwner(User)) this.newRandomOwner();
     this.update();
+    try {
+      this.onLeave?.(User);
+    } catch (error) {}
     return true;
   };
 
   remove = () => {
-    db.del(this.dbKey);
+    // db.del(this.dbKey);
+    if (this.onUpdateInterval) clearInterval(this.onUpdateInterval);
     return this;
   };
 
-  open = () => this.setState(this.states.open);
-  close = () => this.setState(this.states.closed);
-  busy = () => this.setState(this.states.busy);
+  setOpen = () => this.setState(this.states.open);
+  setClose = () => this.setState(this.states.closed);
+  setBusy = () => this.setState(this.states.busy);
 
   isEmpty = () => Object.keys(this.users).length === 0;
   isMember = (User) => this.id === User.room?.id;
@@ -182,33 +242,44 @@ class Room {
     this.setOwner(User);
     return this;
   };
+  forEachUser = (callback = () => {}) => {
+    Object.keys(this.users).forEach((key) => {
+      callback(this.users[key]);
+    });
+  };
 
   init = () => {
     this.setKey();
     this.setState(this.states.open, false, false);
-    db.hmset(
-      this.dbKey,
-      {
-        key: this.key,
-        id: this.id,
-        name: this.name,
-        group: this.group?.id ?? false,
-        state: this.state,
-        full: this.full,
-        options: JSON.stringify(this.options),
-        created_at: unix.now(),
-      },
-      (error, res) => {
-        if (error) console.log(error);
-      }
-    );
+    // db.store(
+    //   this.dbKey,
+    //   {
+    //     key: this.key,
+    //     id: this.id,
+    //     name: this.name,
+    //     group: this.group?.id ?? false,
+    //     state: this.state,
+    //     full: this.full,
+    //     options: JSON.stringify(this.options),
+    //     created_at: unix.now(),
+    //   },
+    //   (error, res) => {
+    //     if (error) console.log(error);
+    //   }
+    // );
 
+    process.nextTick(() => {
+      this.onCreate?.();
+      setImmediate(() => {
+        if (this.onUpdate) this.onUpdateInterval = setInterval(this.onUpdate);
+      });
+    });
     return this;
   };
 
   setKey = () => {
     let key = [this.namespace, this.name];
-    if (!this.options.single) key.push(this.id);
+    key.push(this.id);
 
     if (this.group) {
       key.push("group");
@@ -231,12 +302,12 @@ class Room {
     if (this.full) newKey.push("full");
 
     newKey = keyer(newKey);
-    if (this.dbKey) {
-      db.rename(this.dbKey, newKey, (error) => {
-        if (error) console.log(error);
-      });
-    }
-    this.dbKey = newKey;
+    // if (this.dbKey) {
+    //   db.rename(this.dbKey, newKey, (error) => {
+    //     if (error) console.log(error);
+    //   });
+    // }
+    // this.dbKey = newKey;
 
     if (update) this.update();
     return this;
@@ -244,6 +315,10 @@ class Room {
 
   setFull = (isFull, update = true) => {
     return this.setState(null, isFull, update);
+  };
+
+  logger = function () {
+    console.log(`room ${this.name}:`, ...arguments);
   };
 }
 

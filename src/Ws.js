@@ -2,7 +2,7 @@ import { db, encoder, cookie, log } from "@/Libs";
 import uWS from "uWebSockets.js";
 
 const handleErrors = (error) => {
-  handleErrors(error);
+  console.log("ERROR HANDLER", error);
   process.exit(1);
 };
 
@@ -26,7 +26,7 @@ class Ws {
     this.socket = uWS.App(ssl).ws("/*", {
       compression: 1,
       maxPayloadLength: 16 * 1024 * 1024,
-      idleTimeout: 60 * 5,
+      idleTimeout: 5 * 60,
       open: (ws, req) => {
         let sid = cookie.get(req, "SID");
 
@@ -41,7 +41,7 @@ class Ws {
         }
 
         if (sid) {
-          db.hgetallp(`session:${sid}`)
+          db.find(`session:${sid}`)
             .then((result) => {
               if (result && result.id) {
                 ws.id = result.id;
@@ -67,7 +67,7 @@ class Ws {
                     handleErrors(error);
                   }
                 }
-                log.log("SERVER: CONNECTED", ws.id);
+                // console.log("SERVER: CONNECTED", ws.id);
               } else {
                 try {
                   ws.close();
@@ -95,7 +95,7 @@ class Ws {
         }
       },
       drain: (ws) => {
-        log.log("WebSocket backpressure: " + ws.getBufferedAmount());
+        console.log("WebSocket backpressure: " + ws.getBufferedAmount());
         if (listener.drain) {
           try {
             listener.drain(ws);
@@ -111,7 +111,7 @@ class Ws {
           }
           delete this.clients[ws.id];
         }
-        log.log("closed", ws.id ?? "not logged user");
+        console.log("closed", ws.id ?? "not logged user");
         if (listener.close) {
           try {
             listener.close(

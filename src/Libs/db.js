@@ -6,9 +6,10 @@ const client = redis.createClient();
 const scanner = new redisScan(client);
 client.scanner = scanner;
 
-client.hgetallp = promisify(client.hgetall).bind(client);
-client.scanp = promisify(client.scan).bind(client);
+client.find = promisify(client.hgetall).bind(client);
+client.store = client.hmset;
 
+client.scanp = promisify(client.scan).bind(client);
 client.each = (match, key = null, cb = null) => {
   cb = cb === null ? key : cb;
   client.scanner.eachScan(
@@ -33,7 +34,6 @@ client.each = (match, key = null, cb = null) => {
     }
   );
 };
-
 client.all = (match, key, cb = null, count = 100) => {
   if (typeof key === "function") count = cb;
 
@@ -61,7 +61,6 @@ client.all = (match, key, cb = null, count = 100) => {
   });
   return client;
 };
-
 client.one = (match, cb = null) => {
   return client.all(match, cb, cb, 1);
 };

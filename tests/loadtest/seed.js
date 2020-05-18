@@ -10,7 +10,7 @@ mysql.query(
         id: res.uuid,
         name: res.name,
       };
-      db.hmset(`session:${res.session_id}`, user);
+      db.store(`session:${res.session_id}`, user);
       keys++;
       console.log("SAVED " + keys);
     });

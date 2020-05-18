@@ -1,10 +1,10 @@
 import AbstractUser from "@/Abstract/User";
 
 class User extends AbstractUser {
-  actions = {};
-
   constructor(App, ws) {
     super(App, ws);
+
+    this.store.coins = 500;
   }
 }
 

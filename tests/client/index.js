@@ -30,7 +30,7 @@ class Client {
       ws.on("message", function (payload) {
         if (debug) console.log("CLIENT: GOT", encoder.decode(payload));
         globalMessage(id, encoder.decode(payload));
-        message(id, encoder.decode(payload));
+        message(id, encoder.decode(payload), ws);
       });
     });
   }

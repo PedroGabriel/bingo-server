@@ -19,7 +19,7 @@ export default {
 
               let user = { id, name };
               cookie.set(res, "SID", sid);
-              db.hmset(`session:${sid}`, user);
+              db.store(`session:${sid}`, user);
               resolve(user);
             }
           );
@@ -48,7 +48,7 @@ export default {
                 name: result.name,
               };
               cookie.set(res, "SID", sid);
-              db.hmset(`session:${sid}`, user);
+              db.store(`session:${sid}`, user);
               resolve(user);
             }
           );
@@ -75,7 +75,7 @@ export default {
 
           let user = { id, name };
           cookie.set(res, "SID", sid);
-          db.hmset(`session:${sid}`, user);
+          db.store(`session:${sid}`, user);
           resolve(user);
         }
       );
@@ -90,7 +90,7 @@ const guestNameGenerator = () => {
   let consonant = "bcdfghjklmnprstvwxyz".split("");
 
   let name = "";
-  for (i = 1; i <= syllables; i++) {
+  for (let i = 1; i <= syllables; i++) {
     name += consonant[Math.floor(Math.random() * consonant.length)];
     name += vowel[Math.floor(Math.random() * vowel.length)];
   }
